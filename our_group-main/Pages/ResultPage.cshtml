@@ -1,0 +1,123 @@
+@page
+@model ResultPageModel
+
+<div id="final-scores-and-rankings">
+    <table id="final-scores-and-rankings-table">
+        <tr>
+            <th>User</th>
+            <th>Final Score</th>
+            <th>Rank</th>
+            <th>P/D</th>
+        </tr>
+    </table>
+</div>
+<div id="featured-landmarks">
+</div>
+
+<form method="get" action="/">
+    <button type="submit" class="btn btn-primary">
+        Back to Main Page
+    </button>
+</form>
+
+<!-- Legg til button tilbake til index page -->
+
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
+    <script>
+        let gameId = '@Request.Query[key: "gameId"]';
+        let connection = null;
+
+        function renderFinalScores(finalScores) {
+            const table = document.getElementById("final-scores-and-rankings-table");
+
+            finalScores.forEach(score => {
+                const row = document.createElement("tr");
+
+                const user = document.createElement("td");
+                user.innerText = score.playerName;
+
+                const finalScore = document.createElement("td");
+                finalScore.innerText = score.finalScore;
+
+                const ranking = document.createElement("td");
+                ranking.innerText = score.ranking;
+
+                const pd = document.createElement("td");
+                pd.innerText = score.plusMinus;
+
+                row.appendChild(user);
+                row.appendChild(finalScore);
+                row.appendChild(ranking);
+                row.appendChild(pd);
+
+                table.appendChild(row);
+            });
+        }
+
+        function renderFeaturedLandmarks(landmarks, pointsPerRound) {
+            const container = document.getElementById("featured-landmarks");
+
+            for (let i = 0; i < landmarks.length; i++) {
+                const table = document.createElement("table");
+                const headerRow = document.createElement("tr");
+
+                headerRow.innerHTML = `
+                                                    <th>User</th>
+                                                    <th>Points</th>
+                                                    <th>Location</th>
+                                                `;
+                table.appendChild(headerRow);
+
+                // One row per player for this round i
+                pointsPerRound.forEach(player => {
+                    const row = document.createElement("tr");
+
+                    const user = document.createElement("td");
+                    user.innerText = player.playerName;
+
+                    const points = document.createElement("td");
+                    points.innerText = player.pointsPerRound[i];
+
+                    const location = document.createElement("td");
+                    location.innerText = landmarks[i].locationName;
+
+                    row.appendChild(user);
+                    row.appendChild(points);
+                    row.appendChild(location);
+
+                    table.appendChild(row);
+                });
+
+                container.appendChild(table);
+            }
+        }
+
+        async function startSignalR() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/gamehub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("GetResults", resultData => {
+                // Correct camelCase names expected from SignalR
+                renderFinalScores(resultData.finalScoresAndRankingsJs);
+                renderFeaturedLandmarks(
+                    resultData.featuredLandmarksJs,
+                    resultData.gamePointsEarnedPerRoundJs
+                );
+            });
+
+            connection.start()
+                .then(async () => {
+                    await connection.invoke("JoinGame", gameId);
+                    await connection.invoke("ShowResults", gameId);
+                })
+                .catch(err => console.error("Connection failed:", err));
+        }
+
+        window.onload = startSignalR;
+    </script>
+}

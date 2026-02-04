@@ -1,0 +1,20 @@
+@page
+@model QuickGameCustomGameModel
+@{
+    ViewData["Title"] = "Choose Gamemode";
+}
+
+
+<div class="text-center">
+    <h1 class="display-4">Choose gamemode</h1>
+
+
+    <div class="text-center">
+        <form method="post">
+            <button type="submit" asp-page-handler="JoinQuickGame" class="btn">Join Quickgame</button>
+        </form>
+        <form method="post">
+            <button type="submit" asp-page-handler="JoinCustomGame" class="btn"><a>Custom Game</a></button>
+        </form>
+    </div>
+</div>

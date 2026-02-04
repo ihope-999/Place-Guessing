@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    container_name: our-group-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .          
+      dockerfile: Dockerfile
+    container_name: our-group-web
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=mydb;Username=myuser;Password=mypassword"
+      # Google Maps API key (provided via .env as GOOGLE_MAPS_API_KEY)
+      GoogleMaps__ApiKey: "${GOOGLE_MAPS_API_KEY}"
+      # Seed admin and default user
+      Admin__Username: "admin"
+      Admin__InitialPassword: "admin"
+      SeedUser__Username: "john"
+      SeedUser__Password: "john"
+      SeedUser__Email: "john@mail.no"
+      SeedUser2__Username: "ola"
+      SeedUser2__Password: "ola"
+      SeedUser2__Email: "ola@mail.no"
+    ports:
+      - "5000:8080"
+
+volumes:
+  postgres_data:

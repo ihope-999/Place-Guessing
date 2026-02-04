@@ -1,0 +1,80 @@
+@page
+@model AddFriendsModel
+@{
+    ViewData[index: "Title"] = "Test User Profile";
+}
+
+<h2>Add Friends</h2>
+
+@if (TempData[key: "Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (TempData[key: "Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<div>
+    <h3>Search Users</h3>
+    <form method="get">
+        <input type="text" name="query" value="@Model.Query" placeholder="Search users..." />
+        <button type="submit">Search</button>
+    </form>
+
+    @if (Model.SearchResults.Any())
+    {
+        <h4>Search Results</h4>
+        <ul>
+            @foreach (var user in Model.SearchResults)
+            {
+                <li>
+                    @user.Name.Value
+                    <form method="post" asp-page-handler="SendRequest">
+                        <input type="hidden" name="receiverId" value="@user.Id.Value" />
+                        <button type="submit">Send Friend Request</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+<hr />
+
+<div>
+    <h3>Incoming Friend Requests</h3>
+
+    @if (Model.IncomingRequests.Any())
+    {
+        <ul>
+            @foreach (var request in Model.IncomingRequests)
+            {
+                <li>
+                    @request.RequesterUserName
+                    <form method="post" asp-page-handler="Accept" style="display:inline;">
+                        <input type="hidden" name="requesterId" value="@request.RequesterId" />
+                        <button type="submit">Accept</button>
+                    </form>
+
+                    <form method="post" asp-page-handler="Decline" style="display:inline;">
+                        <input type="hidden" name="requesterId" value="@request.RequesterId" />
+                        <button type="submit">Decline</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>No incoming requests.</p>
+    }
+</div>
+
+<hr />
+
+<div>
+    <h3>Your Friends: @Model.FriendCount</h3>
+    <a asp-page="/Users/Friends">View All Friends</a>
+</div>

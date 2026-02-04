@@ -1,0 +1,65 @@
+@page
+@model our_group.Pages.Users.ProfileModel
+
+<h2>Profile</h2>
+
+@if (TempData["ProfileSaved"] != null)
+{
+    <div class="alert alert-success">Profile updated.</div>
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p><strong>Username:</strong> @Model.UserName</p>
+                <p><strong>Email:</strong> @Model.Email</p>
+                <p><strong>Rank:</strong> @Model.Rank</p>
+                <form method="post" asp-page="/Users/Logout">
+                    <button type="submit" class="btn btn-outline-secondary">Logout</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Complete Your Profile</div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Avatar</label>
+                        <div>
+                            @foreach (var a in Model.AvatarChoices)
+                            {
+                                var id = $"avatar_{a.GetHashCode()}";
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="Input.Avatar" id="@id" value="@a" checked="@(Model.Input.Avatar == a)" />
+                                    <label class="form-check-label" for="@id" style="font-size: 1.5rem;">@a</label>
+                                </div>
+                            }
+                        </div>
+                        <div class="form-text">Pick one, or refresh page to shuffle options.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Favorite regions</label>
+                        <div class="row">
+                            @{ var regions = new[]{"worldwide","africa","asia","europe","north-america","south-america","oceania","antarctica"}; }
+                            @foreach (var r in regions)
+                            {
+                                var id = $"reg_{r}";
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="@id" name="Input.FavoriteRegions" value="@r" checked="@Model.Input.FavoriteRegions.Contains(r)" />
+                                        <label class="form-check-label" for="@id">@r</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

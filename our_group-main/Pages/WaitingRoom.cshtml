@@ -1,0 +1,22 @@
+@page
+@model WaitingRoomModel
+
+
+<h2>Waiting for other players..</h2>
+
+<div id="statusText">Waiting..</div>
+
+<script>
+    // This script will poll every 2 seconds while being on this page. 
+    setInterval(async () => {
+        console.log("Waiting...."); 
+        const res = await fetch('@Url.Page("WaitingRoom", "Status")');
+        const status = await res.json();
+        console.log("Status: ", status); 
+
+        if (status.status === "True") {
+            console.log("Status: ", status.status)
+            window.location.href = `/Lobby?gameId=${status.gameId}`;
+        }
+    }, 2000); 
+</script>

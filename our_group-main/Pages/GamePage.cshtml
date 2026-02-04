@@ -1,0 +1,277 @@
+@page
+@model GamePageModel
+
+<div id="round-timer-bar-container">
+    <div id="round-timer-bar"></div>
+</div>
+<div id="round-timer-text"></div>
+
+<div id="review-box">
+
+    <div id="round-info">
+        <h1 id="message"></h1>
+        <h3 id="location-name"></h3>
+        <p id="review-text"></p>
+    </div>
+
+    <div id="round-results" style="display:none;"></div>
+
+</div>
+
+<div style="width: 100%; height: 500px;" id="map"></div>
+
+<div id="game-score"></div>
+
+<button id="guessBtn">Lock In Guess</button>
+
+<input type="hidden" id="lat" />
+<input type="hidden" id="lng" />
+
+<style>
+    #round-timer-bar-container {
+        width: 100%;
+        height: 10px;
+        background-color: #ccc;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    #round-timer-bar {
+        height: 100%;
+        width: 100%;
+        background-color: #4CAF50;
+        transition: width 1s linear;
+    }
+
+    #round-timer-text {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+</style>
+
+@section Scripts {
+    <script src="https://maps.googleapis.com/maps/api/js?key=@Model.GoogleKey&callback=initMap" async defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+
+    <script>
+        let map;
+        let marker = null;
+        let connection = null;
+
+        let gameId = '@Request.Query["gameId"]';
+        let userId = '@Model.userId';
+
+        let cumulativeScores = {};
+
+        let timerInterval = null;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 3,
+                center: { lat: 20, lng: 0 }
+            });
+
+            map.addListener("click", (e) => {
+                const lat = e.latLng.lat();
+                const lng = e.latLng.lng();
+
+                if (marker) marker.setPosition(e.latLng);
+                else marker = new google.maps.Marker({ position: e.latLng, map });
+
+                document.getElementById("lat").value = lat;
+                document.getElementById("lng").value = lng;
+            });
+        }
+
+        async function startSignalR() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/gamehub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.onreconnected(async () => {
+                await connection.invoke("JoinGame", gameId);
+                await connection.invoke("GetCurrentGameState", gameId);
+            });
+
+            connection.start()
+                .then(async () => {
+                    await connection.invoke("JoinGame", gameId);
+                    await connection.invoke("GetCurrentGameState", gameId);
+                })
+                .catch(err => console.error("Connection failed:", err));
+
+            connection.on("RoundStarted", (roundData) => {
+                startCountdown(roundData.timeLimit);
+
+                document.getElementById("round-info").style.display = "block";
+                document.getElementById("round-results").style.display = "none";
+
+                document.getElementById("review-text").innerText = roundData.roundText;
+                document.getElementById("location-name").innerText = "Round " + roundData.roundNum;
+                document.getElementById("message").innerText = roundData.message;
+
+                console.log("RoundStarted data:", roundData);
+
+                /*
+                let gameScore = document.getElementById("game-score");
+                gameScore.innerHTML = "";
+                let scoreList = document.createElement("ul");
+
+                for (let i = 0; i < roundData.scores.length; i++) {
+                    let li = document.createElement("li");
+                    li.innerHTML = `${roundData.scores[i].playerName}: ${roundData.scores[i].score}`;
+                    scoreList.appendChild(li);
+                }
+
+                gameScore.appendChild(scoreList);
+                */
+
+                console.log("NÅR KOMMER DETTE???");
+                let button = document.getElementById("guessBtn");
+
+                console.log("BUTTON.DISABLED: ", button.disabled);
+                if (roundData.hasGuessed.includes(userId)) {
+                    button.disabled = true;
+                } else {
+                    button.disabled = false;
+                }
+            });
+
+            connection.on("RoundEnded", (data) => {
+                showResultsOnScreen(data.roundResults, data.roundPoints, data.locationData);
+            });
+
+            connection.on("FinishGame", (data) => {
+                window.location.href = `/ResultPage?gameId=${data.gameId}`;
+            });
+        }
+
+        document.getElementById("guessBtn").addEventListener("click", async () => {
+            const lat = document.getElementById("lat").value;
+            const lng = document.getElementById("lng").value;
+
+            if (!lat || !lng) {
+                alert("Click on the map to place your guess.");
+                return;
+            }
+
+            document.getElementById("guessBtn").disabled = true;
+
+            await connection.invoke("SendGuess", gameId, lat, lng, userId);
+        });
+
+        function showResultsOnScreen(results, points, locationData) {
+            const roundInfo = document.getElementById("round-info");
+            const resultsDiv = document.getElementById("round-results");
+
+            roundInfo.style.display = "none";
+            resultsDiv.style.display = "block";
+
+            resultsDiv.innerHTML = "";
+
+            let heading = document.createElement("h2");
+            heading.innerText = "Winners of this round:";
+
+            let list = document.createElement("ul");
+
+            if (results.length === 0) {
+                let li = document.createElement("li");
+                li.innerHTML = "No winner this round.";
+                list.appendChild(li);
+            }
+
+            for (let i = 0; i < results.length; i++) {
+                let li = document.createElement("li");
+                li.innerHTML = `${results[i]}, Points: ${points}`;
+                list.appendChild(li);
+            }
+
+            let answerDiv = document.createElement("div");
+            let h2 = document.createElement("h2");
+            h2.innerText = "The answer was:";
+            let name = document.createElement("p");
+            let country = document.createElement("p");
+
+            name.innerText = "Location: " + locationData.name;
+            country.innerText = "Country: " + locationData.country;
+
+            answerDiv.appendChild(h2);
+            answerDiv.appendChild(name);
+            answerDiv.appendChild(country);
+
+            resultsDiv.appendChild(heading);
+            resultsDiv.appendChild(list);
+            resultsDiv.appendChild(answerDiv);
+
+            results.forEach(results => {
+                if (!cumulativeScores[results]) {
+                    cumulativeScores[results] = 0;
+                }
+            });
+
+            results.forEach(results => {
+                cumulativeScores[results] += points;
+            });
+
+            let gameScore = document.getElementById("game-score");
+            gameScore.innerHTML = "";
+
+            let scoreList = document.createElement("ul");
+
+            for (const player in cumulativeScores) {
+                let li = document.createElement("li");
+                li.innerHTML = `${player}: ${cumulativeScores[player]} points`;
+                scoreList.appendChild(li);
+            }
+
+            gameScore.appendChild(scoreList);
+
+            // Timer for next round
+            let timer = document.createElement("h3");
+            resultsDiv.appendChild(timer);
+
+            let seconds = 3;
+            let interval = setInterval(() => {
+                timer.innerText = "Next Round In: " + seconds--;
+                if (seconds < 0) clearInterval(interval);
+            }, 1000);
+        }
+
+        function startCountdown(timeLimitSeconds) {
+            const bar = document.getElementById("round-timer-bar");
+            const text = document.getElementById("round-timer-text");
+
+            let timeLeft = timeLimitSeconds;
+
+            bar.style.transition = "none";
+            bar.style.width = "100%";
+
+            void bar.offsetWidth;
+
+            bar.style.transition = `width ${timeLimitSeconds}s linear`;
+            bar.style.width = "0%";
+
+            clearInterval(timerInterval);
+            text.innerText = `${timeLeft}s left`;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft >= 0) {
+                    text.innerText = `${timeLeft}s left`;
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        window.onload = () => {
+            initMap();
+            startSignalR();
+        };
+    </script>
+}

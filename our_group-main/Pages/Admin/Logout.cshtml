@@ -1,0 +1,8 @@
+@page
+@model our_group.Pages.Admin.LogoutModel
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "AdminCookie")]
+
+<form method="post">
+    <button type="submit" class="btn btn-link">Logout (Admin)</button>
+</form>
+

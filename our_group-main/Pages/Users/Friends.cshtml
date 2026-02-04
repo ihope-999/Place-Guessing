@@ -1,0 +1,26 @@
+@page
+@model FriendsModel
+
+<h2>Your Friends</h2>
+
+@if (Model.Friends.Any())
+{
+    <ul>
+        @foreach (var friend in Model.Friends)
+        {
+            <li>
+                @friend.Name.Value
+                <form method="post" asp-page-handler="Remove" style="display:inline;">
+                    <input type="hidden" name="friendId" value="@friend.Id.Value" />
+                    <button type="submit">Remove</button>
+                </form>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>You have no friends yet.</p>
+}
+
+<a asp-page="/Users/AddFriends">← Back to Friendspage</a>

@@ -1,0 +1,113 @@
+@page
+@using our_group.Shared.Domain
+@model LobbyModel
+@{
+    var gameId = HttpContext.Request.Query["gameId"];
+}
+
+<h2>Game Lobby</h2>
+<h2 id="countdown">Countdown: </h2>
+<button id="readyButton">Ready up</button>
+
+<ul id="playerList"></ul>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<script>
+    const gameId = "@gameId";
+    const userId = @Model.userId;
+    let readyButton = document.getElementById('readyButton');
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/gamehub")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.onreconnected(async () => {
+        console.log("Reconnected, rejoining group...");
+        await connection.invoke("JoinGame", gameId);
+        await connection.invoke("GetCurrentLobbyState", gameId);
+    });
+
+    connection.start()
+        .then(async () => {
+            console.log("Connected to SignalR");
+            await connection.invoke("JoinGame", gameId);
+            await connection.invoke("GetCurrentLobbyState", gameId);
+        })
+        .catch(err => console.error("Initial connection failed:", err));
+
+    // Gets the relevant lobbydata from the GameRuntime. This would be the player names and id's. 
+    connection.on("getLobbyData", data => {
+        const players = data.players; // camelCase
+        const playerList = document.getElementById("playerList");
+        playerList.innerHTML = "";
+
+        players.forEach(player => {
+            const li = document.createElement("li");
+            li.setAttribute("id", player.playerId);
+
+            const wrapper = document.createElement("div");
+
+            const nameTag = document.createElement("p");
+            nameTag.innerText = player.playerName;
+            
+            const rankTag = document.createElement("p");
+            rankTag.innerText = "Rank: " + player.playerRank;
+
+            const readyStatus = document.createElement("p");
+            console.log("Lobby status: ", player.lobbyStatus);
+            readyStatus.innerText = player.lobbyStatus === 0 ? "Not Ready" : "Ready";
+
+            wrapper.appendChild(nameTag);
+            wrapper.appendChild(rankTag); 
+            wrapper.appendChild(readyStatus);
+            li.appendChild(wrapper);
+            playerList.appendChild(li);
+        });
+    });
+    
+    // Socket function that displays errors
+   // connection.on("Error")
+
+    // Socket function that changes a players ready status to "Ready" from "Not ready"
+    connection.on("PlayerReadyStatusChanged", data => {
+
+        let liElements = document.getElementById("playerList");
+        
+        // goes through the list of li-elements and updates the ready status 
+        for (const li of liElements.children) {
+            if (li.id == data.userId) {
+                if (li.firstElementChild) {
+                    li.firstElementChild.childNodes[2].innerHTML = data.lobbyStatus;
+                }
+            }
+        }
+    });
+
+    // Event based function which initiates a socket function to give the message to the GameRuntime that the player is
+    // ready 
+    readyButton.onclick = function () {
+        connection.invoke("PlayerReady", gameId, userId);
+    }
+
+    // Socket function that starts a countdown from 10. After the countdown, a redirection will happen to the game page
+    connection.on("StartCountdown", () => {
+        let seconds = 10;
+        const countdown = document.getElementById("countdown");
+
+        const interval = setInterval(() => {
+            countdown.innerText = "Countdown: " + seconds;
+            seconds--;
+
+            if (seconds < 0) {
+                clearInterval(interval);
+            }
+        }, 1000);
+    });
+
+    connection.on("RedirectToRound", data => {
+        console.log("Game has started: ", data);
+        // We redirect the player to the game page
+        window.location.href = `/GamePage?gameId=${data.gameId}`;
+    });
+</script>

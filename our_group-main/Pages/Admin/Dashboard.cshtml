@@ -1,0 +1,128 @@
+@page
+@model our_group.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<h1>Admin Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Users</h5>
+                <p class="card-text display-6">@Model.Stats.TotalUsers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Active Players</h5>
+                <p class="card-text display-6">@Model.Stats.ActivePlayers</p>
+                <small class="text-muted">Users with PlayerId assigned</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Admin Users</h5>
+                <p class="card-text display-6">@Model.Stats.AdminUsers</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Games Played</h5>
+                <p class="card-text display-6">@Model.Stats.GamesInProgress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Games Completed</h5>
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div>Today</div>
+                        <div class="display-6">@Model.Stats.GamesCompletedToday</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div>This Week</div>
+                        <div class="display-6">@Model.Stats.GamesCompletedThisWeek</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div>This Month</div>
+                        <div class="display-6">@Model.Stats.GamesCompletedThisMonth</div>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <strong>Average Duration:</strong>
+                    @if (Model.Stats.AverageGameDuration is TimeSpan avg)
+                    {
+                        <span>@avg</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">N/A</span>
+                    }
+                </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Most Popular Regions</h5>
+                @if (Model.Stats.TopRegions.Count == 0)
+                {
+                    <div class="text-muted">No region preferences yet.</div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var item in Model.Stats.TopRegions)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@item.Name</span>
+                                <span class="badge bg-primary rounded-pill">@item.Count</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Most Popular Categories</h5>
+                @if (Model.Stats.TopCategories.Count == 0)
+                {
+                    <div class="text-muted">No categories available.</div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var item in Model.Stats.TopCategories)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>@item.Name</span>
+                                <span class="badge bg-secondary rounded-pill">@item.Count</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+

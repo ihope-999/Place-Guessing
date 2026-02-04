@@ -1,0 +1,146 @@
+@page
+@model our_group.Pages.Admin.Locations.IndexModel
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "AdminCookie")]
+
+<h2>Landmarks</h2>
+
+@if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+{
+    <div class="alert alert-info">@Model.StatusMessage</div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Search Google Places</h5>
+        <form method="post" asp-page-handler="Search" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Name (optional)</label>
+                <input asp-for="SearchQuery" class="form-control" placeholder="e.g., Eiffel Tower" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <select asp-for="FilterCategory" class="form-select">
+                    <option value="">Any</option>
+                    <option>Landmark</option>
+                    <option>Museum</option>
+                    <option>Restaurant</option>
+                    <option>Park</option>
+                    <option>HistoricalSite</option>
+                    <option>NaturalWonder</option>
+                    <option>ReligiousSite</option>
+                    <option>Shopping</option>
+                    <option>Entertainment</option>
+                    <option>Hotel</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">City</label>
+                <input asp-for="FilterCity" class="form-control" placeholder="City" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Region</label>
+                <input asp-for="FilterRegion" class="form-control" placeholder="Region/State" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Country</label>
+                <input asp-for="FilterCountry" class="form-control" placeholder="Country" />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">Limit</label>
+                <input asp-for="FilterLimit" type="number" min="1" max="20" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">Fetch</button>
+            </div>
+        </form>
+    </div>
+    </div>
+
+@if (Model.SearchResults?.Any() == true)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Search Results</h5>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Lat</th>
+                        <th>Lng</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var r in Model.SearchResults)
+                {
+                    <tr>
+                        <td>@r.Name</td>
+                        <td>@r.Address</td>
+                        <td>@r.Lat</td>
+                        <td>@r.Lng</td>
+                        <td>
+                            <form method="post" asp-page-handler="Import" class="d-inline">
+                                <input type="hidden" name="ImportPlaceId" value="@r.PlaceId" />
+                                <button type="submit" class="btn btn-sm btn-success">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>City</th>
+            <th>Country</th>
+            <th>Category</th>
+            <th>Difficulty</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var l in Model.Items)
+    {
+        <tr>
+            <td>@l.Id</td>
+            <td>@l.Name</td>
+            <td>@l.City</td>
+            <td>@l.Country</td>
+            <td>@l.Category</td>
+            <td>@l.Difficulty</td>
+            <td>
+                @{
+                    var isActive = Model.ActiveMap.GetValueOrDefault(l.Id);
+                }
+                <span class="badge @(isActive ? "bg-success" : "bg-secondary")">@(isActive ? "Active" : "Inactive")</span>
+                <form method="post" asp-page-handler="ToggleActive" class="d-inline ms-2">
+                    <input type="hidden" name="id" value="@l.Id" />
+                    <input type="hidden" name="active" value="true" />
+                    <button type="submit" class="btn btn-sm btn-outline-success" @(isActive ? "disabled" : null)>Add to rotation</button>
+                </form>
+                <form method="post" asp-page-handler="ToggleActive" class="d-inline ms-1">
+                    <input type="hidden" name="id" value="@l.Id" />
+                    <input type="hidden" name="active" value="false" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" @(!isActive ? "disabled" : null)>Remove from rotation</button>
+                </form>
+            </td>
+            <td>
+                <a asp-page="/Admin/locations/Details" asp-route-id="@l.Id" class="btn btn-sm btn-outline-primary">Details</a>
+                <form method="post" asp-page-handler="Delete" class="d-inline ms-1" onsubmit="return confirm('Delete this location? This will also remove its cached reviews.');">
+                    <input type="hidden" name="id" value="@l.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
